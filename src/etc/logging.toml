@@ -1,0 +1,38 @@
+version = 1
+
+[loggers.root]
+level = "NOTSET"
+handlers = ["sysLogHandler", "stderrHandler", "stdoutHandler"]
+
+[loggers.core]
+level = "NOTSET"
+handlers = ["sysLogHandler", "stderrHandler", "stdoutHandler"]
+
+[handlers.stderrHandler]
+level = "ERROR"
+class = "logging.StreamHandler"
+formatter = "simpleFormatter"
+stream = "ext://sys.stderr"
+
+[handlers.stdoutHandler]
+level = "DEBUG"
+class = "logging.StreamHandler"
+formatter = "simpleFormatter"
+filters = ["levelOrHigherDiscardFilter"]
+stream = "ext://sys.stdout"
+
+[handlers.sysLogHandler]
+level = "INFO"
+class = "logging.handlers.SysLogHandler"
+formatter = "sysLogFormatter"
+#address = "/dev/log"
+
+[filters.levelOrHigherDiscardFilter]
+level = "ERROR"
+
+[formatters.simpleFormatter]
+format = "%(asctime)s [%(levelname)s](%(filename)s:%(lineno)s) %(message)s"
+datefmt = "%Y-%m-%d %H:%M:%S"
+
+[formatters.sysLogFormatter]
+format = "%(filename)s[%(process)d.%(thread)d]: (%(funcName)s:%(lineno)s) %(message)s"

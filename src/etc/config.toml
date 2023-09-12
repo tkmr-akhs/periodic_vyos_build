@@ -1,0 +1,23 @@
+[common]
+tmp_dirpath = "~/source/repos/periodic_vyos_build/src/tmp"
+wrk_dirpath = "~/source/repos/vyos_pi_builder"
+pub_dirpath = "~/source/repos/periodic_vyos_build/src/var/www/html/vyos-pi"
+url_vyos_image = "https://vyos.net/get/nightly-builds/"
+url_vyos_kernel = "https://github.com/vyos/vyos-build/blob/current/data/defaults.toml"
+url_pi_kernel = "https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.1.y/Makefile"
+hash_file_vyos_image = "last_hash_vi.txt"
+ver_file_pi_building = "ver_pi_building.txt"
+ver_file_pi_built = "ver_pi_built.txt"
+
+[mail]
+smtp_server = "set.your.mail.server"
+smtp_port = 465
+smtp_localhost = "set.your.local.host"
+smtp_user = "your.name@your.mail.server"
+smtp_password = "Y0urP@ssw0rd"
+smtp_tls = true
+from_addr = "your.name@your.mail.server"
+to_addr = "your.name@your.mail.server"
+
+[rotate]
+image = 5
