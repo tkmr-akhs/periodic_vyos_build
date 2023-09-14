@@ -5,9 +5,6 @@ pub_dirpath = "~/source/repos/periodic_vyos_build/src/var/www/html/vyos-pi"
 url_vyos_image = "https://vyos.net/get/nightly-builds/"
 url_vyos_kernel = "https://github.com/vyos/vyos-build/blob/current/data/defaults.toml"
 url_pi_kernel = "https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.1.y/Makefile"
-hash_file_vyos_image = "last_hash_vi.txt"
-ver_file_pi_building = "ver_pi_building.txt"
-ver_file_pi_built = "ver_pi_built.txt"
 
 [mail]
 smtp_server = "set.your.mail.server"

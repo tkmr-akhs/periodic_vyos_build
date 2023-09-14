@@ -26,6 +26,10 @@ EXIT_CODE_BUILD_TIMED_OUT = 3
 EXIT_CODE_BUILD_FAILURE = 4
 RETRY_MAX = 10
 
+FILE_VYOS_IMAGE_HASH = "last_hash_vi.txt"
+FILE_PI_KERNEL_BUILDING_VER = "ver_pi_building.txt"
+FILE_PI_KERNEL_BUILT_VER = "ver_pi_built.txt"
+
 
 def stop_container() -> None:
     """Stop all Docker containers
@@ -276,13 +280,13 @@ class Main:
         self._url_vyos_kernel = self._app_cnf["common"]["url_vyos_kernel"]
         self._url_pi_kernel = self._app_cnf["common"]["url_pi_kernel"]
         self._hash_file_vyos_image = os.path.join(
-            self._tmp_dirpath, self._app_cnf["common"]["hash_file_vyos_image"]
+            self._tmp_dirpath, FILE_VYOS_IMAGE_HASH
         )
-        self._ver_file_pi_building = os.path.join(
-            self._tmp_dirpath, self._app_cnf["common"]["ver_file_pi_building"]
+        self._file_pi_kernel_building_ver = os.path.join(
+            self._tmp_dirpath, FILE_PI_KERNEL_BUILDING_VER
         )
-        self._ver_file_pi_built = os.path.join(
-            self._tmp_dirpath, self._app_cnf["common"]["ver_file_pi_built"]
+        self._file_pi_kernel_built_ver = os.path.join(
+            self._tmp_dirpath, FILE_PI_KERNEL_BUILT_VER
         )
 
     def _send_notif(
@@ -465,8 +469,8 @@ class Main:
         """
         self._logger.debug("Checking kernel release.")
 
-        prev_building = load_tmp_data(self._ver_file_pi_building)
-        prev_built = load_tmp_data(self._ver_file_pi_built)
+        prev_building = load_tmp_data(self._file_pi_kernel_building_ver)
+        prev_built = load_tmp_data(self._file_pi_kernel_built_ver)
 
         # Retrieve file from github with http.
         html_pi_kernel = get_html(self._url_pi_kernel)
@@ -475,13 +479,14 @@ class Main:
         current_vyos_kernel_ver = get_vyos_require_kernel_version(html_vyos_kernel)
         current_pi_kernel_ver = get_newest_pi_kernel_version(html_pi_kernel)
 
+        if current_vyos_kernel_ver == prev_built:
+            self._logger.debug(
+                f"_check_kernel: False, current_vyos_kernel_ver: '{current_vyos_kernel_ver}', prev_built: '{prev_built}'"
+            )
+            return (False, None)
+
         if current_vyos_kernel_ver == current_pi_kernel_ver:
-            if current_pi_kernel_ver == prev_built:
-                self._logger.debug(
-                    f"_check_kernel: False, current_pi_kernel_ver: '{current_pi_kernel_ver}', prev_built: '{prev_built}'"
-                )
-                return (False, None)
-            elif current_pi_kernel_ver == prev_building:
+            if current_pi_kernel_ver == prev_building:
                 raise KernelBuildingException(current_pi_kernel_ver)
             else:
                 self._logger.debug(
@@ -502,7 +507,7 @@ class Main:
         """
         self._logger.info("Building new kernel package.")
         try:
-            save_tmp_data(self._ver_file_pi_building, kernel_ver)
+            save_tmp_data(self._file_pi_kernel_building_ver, kernel_ver)
 
             # Execute the commands
             self._logger.debug("make container.")
@@ -516,9 +521,9 @@ class Main:
                 60,
                 finalizer_func=stop_container,
             )
-            save_tmp_data(self._ver_file_pi_built, kernel_ver)
+            save_tmp_data(self._file_pi_kernel_built_ver, kernel_ver)
         finally:
-            os.remove(self._ver_file_pi_building)
+            os.remove(self._file_pi_kernel_building_ver)
 
         # Check for file existence
         filepaths = [
