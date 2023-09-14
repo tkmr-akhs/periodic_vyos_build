@@ -456,15 +456,15 @@ class Main:
     def _check_kernel(self) -> tuple[bool, str]:
         """Checks for Raspberry Pi kernel release.
 
-        Checks if a new Linux kernel for Raspberry Pi has been released and also saves its hash.
+        Checks if a new Linux kernel for Raspberry Pi has been released.
 
         Returns:
             tuple[bool, str]: Whether a kernel build is necessary, and the version of the latest Raspberry Pi kernel release.
 
         Raises:
-            KernelIsNowBuildingException
+            KernelBuildingException
                 Raised if the kernel is currently being built.
-            KernelExpiredException
+            OutdatedKernelException
                 Raised if a new kernel is needed.
         """
         self._logger.debug("Checking kernel release.")
