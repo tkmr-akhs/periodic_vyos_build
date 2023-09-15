@@ -21,7 +21,7 @@ import periodic_vyos_build_lib as lib
 EXIT_CODE_NORMAL = 0
 EXIT_CODE_GENERAL_ERROR = -1
 EXIT_CODE_OLD_KERNEL = 1
-EXIT_CODE_NO_KERNEL = 2
+EXIT_CODE_NOW_BUILDING = 2
 EXIT_CODE_BUILD_TIMED_OUT = 3
 EXIT_CODE_BUILD_FAILURE = 4
 RETRY_MAX = 10
@@ -196,6 +196,10 @@ class KernelBuildFailureException(Exception):
         self.output = output
 
 
+class VyOSBuildingException(Exception):
+    """Exception raised when the VyOS is currently being built."""
+
+
 class VyOSBuildFailureException(Exception):
     """Exception raised when the VyOS build fails."""
 
@@ -358,7 +362,7 @@ class Main:
 
                 for i in range(RETRY_MAX):
                     try:
-                        self._build_img()
+                        self._build_img(current_hash_v)
                         break
                     except lib.KeywordTimedOutException as exp:
                         if i >= RETRY_MAX - 1:
@@ -371,8 +375,6 @@ class Main:
                             return EXIT_CODE_BUILD_TIMED_OUT
 
                 archived_files = self._archive_img(iso_url)
-
-                save_tmp_data(self._file_vyos_image_built_hash, current_hash_v)
 
                 self._publish_files(archived_files)
 
@@ -400,7 +402,7 @@ class Main:
                 [],
                 start_datetime,
             )
-            return EXIT_CODE_NO_KERNEL
+            return EXIT_CODE_NOW_BUILDING
         except KernelBuildFailureException as exp:
             self._send_notif(
                 "Creation of kernel failed.",
@@ -408,7 +410,6 @@ class Main:
                 [],
                 start_datetime,
             )
-            save_tmp_data(self._file_vyos_image_built_hash, current_hash_v)
             return EXIT_CODE_BUILD_FAILURE
         except lib.CommandTimedOutException as exp:
             self._send_notif(
@@ -418,6 +419,14 @@ class Main:
                 start_datetime,
             )
             return EXIT_CODE_BUILD_TIMED_OUT
+        except VyOSBuildingException as exp:
+            self._send_notif(
+                "VyOS is now being built.",
+                "VyOS がビルド中です。",
+                [],
+                start_datetime,
+            )
+            return EXIT_CODE_NOW_BUILDING
         except VyOSBuildFailureException as exp:
             self._send_notif(
                 "Creation of vyos-rpi.img.zip failed.",
@@ -470,7 +479,7 @@ class Main:
                 current_vyos_kernel_ver,
                 prev_built,
             )
-            return (False, None)
+            return False, None
 
         if current_vyos_kernel_ver == current_pi_kernel_ver:
             if current_pi_kernel_ver == prev_building:
@@ -481,7 +490,7 @@ class Main:
                     current_pi_kernel_ver,
                     prev_built,
                 )
-                return (True, current_pi_kernel_ver)
+                return True, current_pi_kernel_ver
         else:
             raise OutdatedKernelException(
                 current_vyos_kernel_ver, current_pi_kernel_ver
@@ -489,6 +498,9 @@ class Main:
 
     def _build_kernel(self, kernel_ver: str) -> None:
         """Build a kernel package for Raspberry Pi.
+
+        Args:
+            kernel_ver (str):
 
         Raises:
             CommandTimedOutException:
@@ -522,32 +534,46 @@ class Main:
             raise KernelBuildFailureException(output)
 
     def _check_vyos(self) -> tuple[bool, str, str]:
-        """
-        Check for new VyOS releases.
+        """Check for new VyOS releases.
+
+        Checks if a new VyOS has been released.
 
         Returns:
             tuple[bool, str, str]: Whether there is a new release, current hash, and arm64 version ISO URL.
+
+        Raises:
+            VyOSBuildingException
+                Raised if VyOS is currently being built.
         """
         self._logger.debug("Checking for VyOS release.")
+
+        prev_building = load_tmp_data(self._file_vyos_image_building_hash)
+        prev_built = load_tmp_data(self._file_vyos_image_built_hash)
+
         # Retrieve web page
         html = get_html(self._url_vyos_image, self._page_timeout)
 
         # Compare the current and previous versions
-        last_hash = load_tmp_data(self._file_vyos_image_built_hash)
         current_hash = hashlib.sha256(html).hexdigest()
 
-        if last_hash != current_hash:
-            iso_url = get_new_iso_url(html)
-            self._logger.info("New releases of VyOS are available.")
-            return True, current_hash, iso_url
-        else:
+        if current_hash == prev_built:
             self._logger.info("No new releases of VyOS are available.")
-            return False, current_hash, None
+            return False, None, None
 
-    def _build_img(self) -> None:
+        if current_hash == prev_building:
+            raise VyOSBuildingException()
+
+        self._logger.info("New releases of VyOS are available.")
+        iso_url = get_new_iso_url(html)
+        return True, current_hash, iso_url
+
+    def _build_img(self, vyos_hash: str) -> None:
         """Build a VyOS image for Raspberry Pi.
 
         Builds a VyOS image for Raspberry Pi. After building, a zip file of the generated image will also be created (2 in total, one for rpi 4b and one for rpi cm4).
+
+        Args:
+            vyos_hash (str):
 
         Raises:
             CommandTimedOutException:
@@ -556,19 +582,24 @@ class Main:
                 Raised if the build fails and no zip file is generated.
         """
         self._logger.info("Building new VyOS image.")
+        try:
+            save_tmp_data(self._file_pi_kernel_building_ver, vyos_hash)
 
-        # Execute the commands
-        self._logger.debug("make container.")
-        output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
+            # Execute the commands
+            self._logger.debug("make container.")
+            output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
 
-        self._logger.debug("make iso-registry.")
-        output = lib.run_command_with_timeout(
-            ["make", "iso-registry"],
-            140 * 60,
-            "useradd warning: vyos_bld's uid 0 outside of the UID_MIN 1000 and UID_MAX 60000 range.",
-            60,
-            finalizer_func=stop_container,
-        )
+            self._logger.debug("make iso-registry.")
+            output = lib.run_command_with_timeout(
+                ["make", "iso-registry"],
+                140 * 60,
+                "useradd warning: vyos_bld's uid 0 outside of the UID_MIN 1000 and UID_MAX 60000 range.",
+                60,
+                finalizer_func=stop_container,
+            )
+            save_tmp_data(self._file_vyos_image_built_hash, vyos_hash)
+        finally:
+            os.remove(self._file_vyos_image_building_hash)
 
         # Check for file existence
         filepaths = [
