@@ -26,6 +26,7 @@ EXIT_CODE_BUILD_TIMED_OUT = 3
 EXIT_CODE_BUILD_FAILURE = 4
 RETRY_MAX = 10
 
+FILE_ENCODE = "utf-8"
 FILE_VYOS_IMAGE_HASH = "last_hash_vi.txt"
 FILE_PI_KERNEL_BUILDING_VER = "ver_pi_building.txt"
 FILE_PI_KERNEL_BUILT_VER = "ver_pi_built.txt"
@@ -112,29 +113,6 @@ def get_new_iso_url(html: bytes) -> str:
     return result[0]
 
 
-def check_update(hash_file: str, target_data: bytes) -> tuple[bool, str]:
-    """Check the data is updated.
-
-    Check if the hash of the provided target data matches the hash stored in the specified file.
-
-    Args:
-        hash_file (str): Path to the file containing the previously stored hash.
-        target_data (bytes): Data whose hash needs to be compared against the stored hash.
-
-    Returns:
-        tuple[bool, str]:
-            A tuple containing a boolean indicating whether the hashes are different, and the\
-            current hash of the target data.
-    """
-    # ハッシュファイルを読み込む
-    last_hash = load_tmp_data(hash_file)
-
-    # 前回取得したHTMLとハッシュを比較する
-    current_hash = hashlib.sha256(target_data).hexdigest()
-
-    return last_hash != current_hash, current_hash
-
-
 def load_tmp_data(tmp_file: str) -> str:
     """Load the provided hash to the specified file.
 
@@ -145,7 +123,7 @@ def load_tmp_data(tmp_file: str) -> str:
         str: The data string to be loaded.
     """
     try:
-        with open(tmp_file, "r") as f:
+        with open(tmp_file, "r", encoding=FILE_ENCODE) as f:
             return f.read().strip()
     except FileNotFoundError:
         return ""
@@ -158,20 +136,21 @@ def save_tmp_data(tmp_file: str, current_data: str) -> None:
         tmp_file (str): Path to the file where the data should be stored.
         current_data (str): The data string to be saved.
     """
-    with open(tmp_file, "w") as f:
+    with open(tmp_file, "w", encoding=FILE_ENCODE) as f:
         f.write(current_data)
 
 
-def get_html(url: str) -> bytes:
+def get_html(url: str, timeout: float) -> bytes:
     """Retrieve the HTML content of the specified URL.
 
     Args:
         url (str): The URL to fetch the HTML content from.
+        timeout (float): The maximum time, in seconds, to wait for the server's response.
 
     Returns:
         bytes: The HTML content of the specified URL.
     """
-    response = requests.get(url)
+    response = requests.get(url, timeout=timeout)
     return response.content
 
 
@@ -279,6 +258,8 @@ class Main:
         self._url_vyos_image = self._app_cnf["common"]["url_vyos_image"]
         self._url_vyos_kernel = self._app_cnf["common"]["url_vyos_kernel"]
         self._url_pi_kernel = self._app_cnf["common"]["url_pi_kernel"]
+        self._page_timeout = self._app_cnf["common"]["page_timeout"]
+        self._download_timeout = self._app_cnf["common"]["download_timeout"]
         self._hash_file_vyos_image = os.path.join(
             self._tmp_dirpath, FILE_VYOS_IMAGE_HASH
         )
@@ -473,15 +454,17 @@ class Main:
         prev_built = load_tmp_data(self._file_pi_kernel_built_ver)
 
         # Retrieve file from github with http.
-        html_pi_kernel = get_html(self._url_pi_kernel)
-        html_vyos_kernel = get_html(self._url_vyos_kernel)
+        html_pi_kernel = get_html(self._url_pi_kernel, self._page_timeout)
+        html_vyos_kernel = get_html(self._url_vyos_kernel, self._page_timeout)
 
         current_vyos_kernel_ver = get_vyos_require_kernel_version(html_vyos_kernel)
         current_pi_kernel_ver = get_newest_pi_kernel_version(html_pi_kernel)
 
         if current_vyos_kernel_ver == prev_built:
             self._logger.debug(
-                f"_check_kernel: False, current_vyos_kernel_ver: '{current_vyos_kernel_ver}', prev_built: '{prev_built}'"
+                "_check_kernel: False, current_vyos_kernel_ver: '%s', prev_built: '%s'",
+                current_vyos_kernel_ver,
+                prev_built,
             )
             return (False, None)
 
@@ -490,7 +473,9 @@ class Main:
                 raise KernelBuildingException(current_pi_kernel_ver)
             else:
                 self._logger.debug(
-                    f"_check_kernel: True, current_pi_kernel_ver: '{current_pi_kernel_ver}', prev_built: '{prev_built}'"
+                    "_check_kernel: True, current_pi_kernel_ver: '%s', prev_built: '%s'",
+                    current_pi_kernel_ver,
+                    prev_built,
                 )
                 return (True, current_pi_kernel_ver)
         else:
@@ -541,11 +526,13 @@ class Main:
         """
         self._logger.debug("Checking for VyOS release.")
         # Retrieve web page
-        html = get_html(self._url_vyos_image)
+        html = get_html(self._url_vyos_image, self._page_timeout)
 
         # Compare the current and previous versions
-        is_changed_page, current_hash = check_update(self._hash_file_vyos_image, html)
-        if is_changed_page:
+        last_hash = load_tmp_data(self._hash_file_vyos_image)
+        current_hash = hashlib.sha256(html).hexdigest()
+
+        if last_hash != current_hash:
             iso_url = get_new_iso_url(html)
             self._logger.info("New releases of VyOS are available.")
             return True, current_hash, iso_url
@@ -611,7 +598,9 @@ class Main:
 
         # Download amd64 ISO
         self._logger.debug("Downloading vyos-amd64 iso.")
-        amd64iso_response = requests.get(iso_url, stream=True)
+        amd64iso_response = requests.get(
+            iso_url, stream=True, timeout=self._download_timeout
+        )
         amd64iso_filename = iso_url.split("/")[-1]
         amd64iso_zipname = f"vyos-amd64.iso.{datetime.date.today():%Y-%m-%d}.zip"
 
