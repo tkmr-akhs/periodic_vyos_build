@@ -27,7 +27,8 @@ EXIT_CODE_BUILD_FAILURE = 4
 RETRY_MAX = 10
 
 FILE_ENCODE = "utf-8"
-FILE_VYOS_IMAGE_HASH = "last_hash_vi.txt"
+FILE_VYOS_IMAGE_BUILDING_HASH = "hash_vyos_building.txt"
+FILE_VYOS_IMAGE_BUILT_HASH = "last_hash_vi.txt"
 FILE_PI_KERNEL_BUILDING_VER = "ver_pi_building.txt"
 FILE_PI_KERNEL_BUILT_VER = "ver_pi_built.txt"
 
@@ -260,8 +261,11 @@ class Main:
         self._url_pi_kernel = self._app_cnf["common"]["url_pi_kernel"]
         self._page_timeout = self._app_cnf["common"]["page_timeout"]
         self._download_timeout = self._app_cnf["common"]["download_timeout"]
-        self._hash_file_vyos_image = os.path.join(
-            self._tmp_dirpath, FILE_VYOS_IMAGE_HASH
+        self._file_vyos_image_building_hash = os.path.join(
+            self._tmp_dirpath, FILE_VYOS_IMAGE_BUILDING_HASH
+        )
+        self._file_vyos_image_built_hash = os.path.join(
+            self._tmp_dirpath, FILE_VYOS_IMAGE_BUILT_HASH
         )
         self._file_pi_kernel_building_ver = os.path.join(
             self._tmp_dirpath, FILE_PI_KERNEL_BUILDING_VER
@@ -368,7 +372,7 @@ class Main:
 
                 archived_files = self._archive_img(iso_url)
 
-                save_tmp_data(self._hash_file_vyos_image, current_hash_v)
+                save_tmp_data(self._file_vyos_image_built_hash, current_hash_v)
 
                 self._publish_files(archived_files)
 
@@ -404,7 +408,7 @@ class Main:
                 [],
                 start_datetime,
             )
-            save_tmp_data(self._hash_file_vyos_image, current_hash_v)
+            save_tmp_data(self._file_vyos_image_built_hash, current_hash_v)
             return EXIT_CODE_BUILD_FAILURE
         except lib.CommandTimedOutException as exp:
             self._send_notif(
@@ -529,7 +533,7 @@ class Main:
         html = get_html(self._url_vyos_image, self._page_timeout)
 
         # Compare the current and previous versions
-        last_hash = load_tmp_data(self._hash_file_vyos_image)
+        last_hash = load_tmp_data(self._file_vyos_image_built_hash)
         current_hash = hashlib.sha256(html).hexdigest()
 
         if last_hash != current_hash:
