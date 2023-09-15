@@ -583,7 +583,7 @@ class Main:
         """
         self._logger.info("Building new VyOS image.")
         try:
-            save_tmp_data(self._file_pi_kernel_building_ver, vyos_hash)
+            save_tmp_data(self._file_vyos_image_building_hash, vyos_hash)
 
             # Execute the commands
             self._logger.debug("make container.")
