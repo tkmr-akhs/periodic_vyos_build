@@ -531,6 +531,7 @@ class Main:
             f for f in glob.glob("build/linux-image-*.deb") if os.path.isfile(f)
         ]
         if len(filepaths) < 1:
+            os.remove(self._file_pi_kernel_built_ver)
             raise KernelBuildFailureException(output)
 
     def _check_vyos(self) -> tuple[bool, str, str]:
