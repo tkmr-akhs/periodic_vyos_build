@@ -3,8 +3,8 @@ tmp_dirpath = "~/source/repos/periodic_vyos_build/src/tmp"
 wrk_dirpath = "~/source/repos/vyos_pi_builder"
 pub_dirpath = "~/source/repos/periodic_vyos_build/src/var/www/html/vyos-pi"
 url_vyos_image = "https://vyos.net/get/nightly-builds/"
-url_vyos_kernel = "https://github.com/vyos/vyos-build/blob/current/data/defaults.toml"
-url_pi_kernel = "https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.1.y/Makefile"
+url_vyos_kernel = "https://raw.githubusercontent.com/vyos/vyos-build/sagitta/data/defaults.toml"
+url_pi_kernel = "https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.6.y/Makefile"
 page_timeout = 30
 download_timeout = 300
 

@@ -76,7 +76,7 @@ class Main:
             del_count = max(len(value) - self._rotate, 0)
             while del_count > 0:
                 del_item = value.pop(0)
-                # os.remove(del_item)
+                os.remove(del_item)
                 self._logger.info(f"Delete {del_item}.")
                 del_count = del_count - 1
 

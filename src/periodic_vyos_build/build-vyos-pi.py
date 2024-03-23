@@ -53,9 +53,7 @@ def get_vyos_require_kernel_version(data: bytes) -> str:
     Returns:
         str: The kernel version required by VyOS.
     """
-    parsed_data = json.load(io.BytesIO(data))
-    raw_lines = parsed_data["payload"]["blob"]["rawLines"]
-    default_toml = tomli.load(io.BytesIO(os.linesep.join(raw_lines).encode()))
+    default_toml = tomli.load(io.BytesIO(data))
     return default_toml["kernel_version"]
 
 
