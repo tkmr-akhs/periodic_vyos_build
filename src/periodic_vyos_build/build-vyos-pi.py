@@ -509,9 +509,6 @@ class Main:
             save_tmp_data(self._file_pi_kernel_building_ver, kernel_ver)
 
             # Execute the commands
-            #self._logger.debug("make container.")
-            #output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
-
             self._logger.debug("make kernel-registry.")
             output = lib.run_command_with_timeout(
                 ["make", "kernel-registry"],
@@ -553,7 +550,7 @@ class Main:
         html = get_html(self._url_vyos_image, self._page_timeout)
 
         # Compare the current and previous versions
-        current_hash = hashlib.sha256(html).hexdigest()
+        current_hash = lib.get_git_remote_head("vyos-build", "sagitta")
 
         if current_hash == prev_built:
             self._logger.info("No new releases of VyOS are available.")
@@ -585,9 +582,6 @@ class Main:
             save_tmp_data(self._file_vyos_image_building_hash, vyos_hash)
 
             # Execute the commands
-            #self._logger.debug("make container.")
-            #output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
-
             self._logger.debug("make iso-registry.")
             output = lib.run_command_with_timeout(
                 ["make", "iso-registry"],
@@ -601,9 +595,7 @@ class Main:
             os.remove(self._file_vyos_image_building_hash)
 
         # Check for file existence
-        filepaths = [
-            f for f in glob.glob("vyos-bcm2711-rpi-*.img.zip") if os.path.isfile(f)
-        ]
+        filepaths = [f for f in glob.glob("vyos-bcm271*.img.zip") if os.path.isfile(f)]
         if len(filepaths) < 2:
             raise VyOSBuildFailureException(output)
 
@@ -622,9 +614,7 @@ class Main:
         archived_files: list[str] = []
 
         self._logger.debug("Renaming vyos-pi zip.")
-        filepaths = [
-            f for f in glob.glob("vyos-bcm2711-rpi-*.img.zip") if os.path.isfile(f)
-        ]
+        filepaths = [f for f in glob.glob("vyos-bcm271*.img.zip") if os.path.isfile(f)]
         for filepath in filepaths:
             new_filepath = f"{os.path.splitext(filepath)[0]}.{datetime.date.today():%Y-%m-%d}{os.path.splitext(filepath)[1]}"
             os.rename(filepath, new_filepath)
