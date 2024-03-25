@@ -590,7 +590,10 @@ class Main:
                 60,
                 finalizer_func=stop_container,
             )
-            save_tmp_data(self._file_vyos_image_built_hash, vyos_hash)
+            save_tmp_data(
+                self._file_vyos_image_built_hash,
+                (vyos_hash if vyos_hash else "(initial)"),
+            )
         finally:
             os.remove(self._file_vyos_image_building_hash)
 
