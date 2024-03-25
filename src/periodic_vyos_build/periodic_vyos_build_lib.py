@@ -245,7 +245,10 @@ def get_git_remote_head(path: str, branch: str = None) -> str:
     current_dir = os.getcwd()
 
     if path:
-        os.chdir(path)
+        if os.path.isdir(path):
+            os.chdir(path)
+        else:
+            return None
 
     command = ["git", "ls-remote", "origin", f"refs/heads/{branch}"]
     result = subprocess.run(
@@ -275,7 +278,10 @@ def get_git_local_head(path: str) -> str:
     current_dir = os.getcwd()
 
     if path:
-        os.chdir(path)
+        if os.path.isdir(path):
+            os.chdir(path)
+        else:
+            return None
 
     command = ["git", "log", "-1", "HEAD", "--format=%H"]
     result = subprocess.run(
