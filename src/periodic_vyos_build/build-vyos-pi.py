@@ -372,7 +372,7 @@ class Main:
                             )
                             return EXIT_CODE_BUILD_TIMED_OUT
 
-                archived_files = self._archive_img(iso_url)
+                archived_files = self._archive_img()
 
                 self._publish_files(archived_files)
 
