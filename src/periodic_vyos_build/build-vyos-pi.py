@@ -550,13 +550,19 @@ class Main:
         current_hash = lib.get_git_remote_head("vyos-build", "sagitta")
 
         if current_hash == prev_built:
-            self._logger.info("No new releases of VyOS are available.")
+            self._logger.info(
+                "No new releases of VyOS are available. (built is %s)", prev_built
+            )
             return False, None
 
         if current_hash == prev_building:
             raise VyOSBuildingException()
 
-        self._logger.info("New releases of VyOS are available.")
+        self._logger.info(
+            "New releases of VyOS are available. (built: %s, to be built: %s)",
+            prev_built,
+            current_hash,
+        )
         return True, current_hash
 
     def _build_img(self, vyos_hash: str) -> None:
