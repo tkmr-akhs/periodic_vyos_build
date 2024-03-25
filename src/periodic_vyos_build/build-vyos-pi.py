@@ -509,9 +509,6 @@ class Main:
             save_tmp_data(self._file_pi_kernel_building_ver, kernel_ver)
 
             # Execute the commands
-            #self._logger.debug("make container.")
-            #output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
-
             self._logger.debug("make kernel-registry.")
             output = lib.run_command_with_timeout(
                 ["make", "kernel-registry"],
@@ -532,7 +529,7 @@ class Main:
             os.remove(self._file_pi_kernel_built_ver)
             raise KernelBuildFailureException(output)
 
-    def _check_vyos(self) -> tuple[bool, str, str]:
+    def _check_vyos(self) -> tuple[bool, str]:
         """Check for new VyOS releases.
 
         Checks if a new VyOS has been released.
@@ -549,22 +546,18 @@ class Main:
         prev_building = load_tmp_data(self._file_vyos_image_building_hash)
         prev_built = load_tmp_data(self._file_vyos_image_built_hash)
 
-        # Retrieve web page
-        html = get_html(self._url_vyos_image, self._page_timeout)
-
         # Compare the current and previous versions
-        current_hash = hashlib.sha256(html).hexdigest()
+        current_hash = lib.get_git_remote_head("vyos-build", "sagitta")
 
         if current_hash == prev_built:
             self._logger.info("No new releases of VyOS are available.")
-            return False, None, None
+            return False, None
 
         if current_hash == prev_building:
             raise VyOSBuildingException()
 
         self._logger.info("New releases of VyOS are available.")
-        iso_url = get_new_iso_url(html)
-        return True, current_hash, iso_url
+        return True, current_hash
 
     def _build_img(self, vyos_hash: str) -> None:
         """Build a VyOS image for Raspberry Pi.
@@ -585,9 +578,6 @@ class Main:
             save_tmp_data(self._file_vyos_image_building_hash, vyos_hash)
 
             # Execute the commands
-            #self._logger.debug("make container.")
-            #output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
-
             self._logger.debug("make iso-registry.")
             output = lib.run_command_with_timeout(
                 ["make", "iso-registry"],
@@ -601,13 +591,11 @@ class Main:
             os.remove(self._file_vyos_image_building_hash)
 
         # Check for file existence
-        filepaths = [
-            f for f in glob.glob("vyos-bcm2711-rpi-*.img.zip") if os.path.isfile(f)
-        ]
+        filepaths = [f for f in glob.glob("vyos-bcm271*.img.zip") if os.path.isfile(f)]
         if len(filepaths) < 2:
             raise VyOSBuildFailureException(output)
 
-    def _archive_img(self, iso_url: str) -> None:
+    def _archive_img(self) -> None:
         """Archive VyOS images.
 
         Renames the zip files containing the VyOS images for Raspberry Pi with the current date. Also, downloads the amd64 ISO from the specified URL and zips it with the current date.
@@ -622,35 +610,11 @@ class Main:
         archived_files: list[str] = []
 
         self._logger.debug("Renaming vyos-pi zip.")
-        filepaths = [
-            f for f in glob.glob("vyos-bcm2711-rpi-*.img.zip") if os.path.isfile(f)
-        ]
+        filepaths = [f for f in glob.glob("vyos-bcm271*.img.zip") if os.path.isfile(f)]
         for filepath in filepaths:
             new_filepath = f"{os.path.splitext(filepath)[0]}.{datetime.date.today():%Y-%m-%d}{os.path.splitext(filepath)[1]}"
             os.rename(filepath, new_filepath)
             archived_files.append(new_filepath)
-
-        # Download amd64 ISO
-        self._logger.debug("Downloading vyos-amd64 iso.")
-        amd64iso_response = requests.get(
-            iso_url, stream=True, timeout=self._download_timeout
-        )
-        amd64iso_filename = iso_url.split("/")[-1]
-        amd64iso_zipname = f"vyos-amd64.iso.{datetime.date.today():%Y-%m-%d}.zip"
-
-        with open(amd64iso_filename, "wb") as f:
-            for chunk in amd64iso_response.iter_content(chunk_size=4096):
-                f.write(chunk)
-
-        if os.path.isfile("vyos-rolling-latest.iso"):
-            os.remove("vyos-rolling-latest.iso")
-
-        self._logger.debug("Zipping vyos-amd64 iso.")
-        with zipfile.ZipFile(amd64iso_zipname, "w", zipfile.ZIP_DEFLATED) as zipf:
-            zipf.write(amd64iso_filename)
-
-        os.rename(amd64iso_filename, "vyos-rolling-latest.iso")
-        archived_files.append(amd64iso_zipname)
 
         return archived_files
 

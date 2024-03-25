@@ -4,6 +4,7 @@ import pathlib
 import select
 import smtplib
 import subprocess
+import re
 import time
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -229,6 +230,65 @@ def recursive_merge(
         else:
             if not value is None or overwrite_none:
                 target_dict[key] = value
+
+
+def get_git_remote_head(path: str, branch: str = None) -> str:
+    """_summary_
+
+    Args:
+        path (str): _description_
+        branch (str, optional): _description_. Defaults to None.
+
+    Returns:
+        str: _description_
+    """
+    current_dir = os.getcwd()
+
+    if path:
+        os.chdir(path)
+
+    command = ["git", "ls-remote", "origin", f"refs/heads/{branch}"]
+    result = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    output = re.sub(
+        r"\trefs/heads/" + re.escape(branch) + "$", "", result.stdout
+    ).strip()
+
+    os.chdir(current_dir)
+    return output
+
+
+def get_git_local_head(path: str) -> str:
+    """_summary_
+
+    Args:
+        path (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    current_dir = os.getcwd()
+
+    if path:
+        os.chdir(path)
+
+    command = ["git", "log", "-1", "HEAD", "--format=%H"]
+    result = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    output = result.stdout.strip()
+
+    os.chdir(current_dir)
+    return output
 
 
 class SMTPUserUnknown(smtplib.SMTPResponseException):
