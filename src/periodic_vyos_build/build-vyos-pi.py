@@ -36,11 +36,11 @@ FILE_PI_KERNEL_BUILT_VER = "ver_pi_built.txt"
 def stop_container() -> None:
     """Stop all Docker containers
 
-    Stop all Docker containers that originate from the "vyos/vyos-build:current-arm64" ancestor\
+    Stop all Docker containers that originate from the "vyos/vyos-build:sagitta-arm64" ancestor\
     image.
     """
     os.system(
-        'sudo docker stop $(sudo docker ps -a -q --filter "ancestor=vyos/vyos-build:current-arm64")'
+        'sudo docker stop $(sudo docker ps -a -q --filter "ancestor=vyos/vyos-build:sagitta-arm64")'
     )
 
 
@@ -509,8 +509,8 @@ class Main:
             save_tmp_data(self._file_pi_kernel_building_ver, kernel_ver)
 
             # Execute the commands
-            self._logger.debug("make container.")
-            output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
+            #self._logger.debug("make container.")
+            #output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
 
             self._logger.debug("make kernel-registry.")
             output = lib.run_command_with_timeout(
@@ -585,8 +585,8 @@ class Main:
             save_tmp_data(self._file_vyos_image_building_hash, vyos_hash)
 
             # Execute the commands
-            self._logger.debug("make container.")
-            output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
+            #self._logger.debug("make container.")
+            #output = lib.run_command_with_timeout(["make", "container"], 80 * 60)
 
             self._logger.debug("make iso-registry.")
             output = lib.run_command_with_timeout(
