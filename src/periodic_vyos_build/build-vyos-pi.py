@@ -352,11 +352,9 @@ class Main:
 
                 return EXIT_CODE_NORMAL
             else:
-                is_new_vyos, current_hash_v, iso_url = self._check_vyos()
+                is_new_vyos, current_hash_v = self._check_vyos()
                 if not is_new_vyos:
                     return EXIT_CODE_NORMAL
-
-                self._logger.info("The URL of the newest VyOS ISO is %s.", iso_url)
 
                 for i in range(RETRY_MAX):
                     try:
@@ -555,7 +553,7 @@ class Main:
             )
             return False, None
 
-        if current_hash == prev_building:
+        if current_hash and current_hash == prev_building:
             raise VyOSBuildingException()
 
         self._logger.info(
