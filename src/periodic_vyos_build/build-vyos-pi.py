@@ -579,7 +579,10 @@ class Main:
         """
         self._logger.info("Building new VyOS image.")
         try:
-            save_tmp_data(self._file_vyos_image_building_hash, vyos_hash)
+            save_tmp_data(
+                self._file_vyos_image_building_hash,
+                vyos_hash if vyos_hash else "(initial)",
+            )
 
             # Execute the commands
             self._logger.debug("make iso-registry.")
@@ -590,10 +593,9 @@ class Main:
                 60,
                 finalizer_func=stop_container,
             )
-            save_tmp_data(
-                self._file_vyos_image_built_hash,
-                (vyos_hash if vyos_hash else "(initial)"),
-            )
+
+            vyos_hash = lib.get_git_remote_head("vyos-build", "sagitta")
+            save_tmp_data(self._file_vyos_image_built_hash, vyos_hash)
         finally:
             os.remove(self._file_vyos_image_building_hash)
 
