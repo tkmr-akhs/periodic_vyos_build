@@ -32,15 +32,19 @@ FILE_VYOS_IMAGE_BUILT_HASH = "last_hash_vi.txt"
 FILE_PI_KERNEL_BUILDING_VER = "ver_pi_building.txt"
 FILE_PI_KERNEL_BUILT_VER = "ver_pi_built.txt"
 
+VYOS_MAJOR_VER = "current"
+
 
 def stop_container() -> None:
     """Stop all Docker containers
 
-    Stop all Docker containers that originate from the "vyos/vyos-build:sagitta-arm64" ancestor\
+    Stop all Docker containers that originate from the "vyos/vyos-build:current-arm64" ancestor\
     image.
     """
     os.system(
-        'sudo docker stop $(sudo docker ps -a -q --filter "ancestor=vyos/vyos-build:sagitta-arm64")'
+        'sudo docker stop $(sudo docker ps -a -q --filter "ancestor=vyos/vyos-build:'
+        + VYOS_MAJOR_VER
+        + '-arm64")'
     )
 
 
@@ -545,7 +549,7 @@ class Main:
         prev_built = load_tmp_data(self._file_vyos_image_built_hash)
 
         # Compare the current and previous versions
-        current_hash = lib.get_git_remote_head("vyos-build", "sagitta")
+        current_hash = lib.get_git_remote_head("vyos-build", VYOS_MAJOR_VER)
 
         if current_hash and current_hash == prev_built:
             self._logger.info(
@@ -594,7 +598,7 @@ class Main:
                 finalizer_func=stop_container,
             )
 
-            vyos_hash = lib.get_git_remote_head("vyos-build", "sagitta")
+            vyos_hash = lib.get_git_remote_head("vyos-build", VYOS_MAJOR_VER)
             save_tmp_data(self._file_vyos_image_built_hash, vyos_hash)
         finally:
             os.remove(self._file_vyos_image_building_hash)
