@@ -589,9 +589,18 @@ class Main:
             )
 
             # Execute the commands
-            self._logger.debug("make iso-registry.")
+            self._logger.debug("make container.")
             output = lib.run_command_with_timeout(
-                ["make", "iso-registry"],
+                ["make", "container"],
+                140 * 60,
+                "useradd warning: vyos_bld's uid 0 outside of the UID_MIN 1000 and UID_MAX 60000 range.",
+                60,
+                finalizer_func=stop_container,
+            )
+
+            self._logger.debug("make iso-local.")
+            output = lib.run_command_with_timeout(
+                ["make", "iso-local"],
                 140 * 60,
                 "useradd warning: vyos_bld's uid 0 outside of the UID_MIN 1000 and UID_MAX 60000 range.",
                 60,
