@@ -33,6 +33,7 @@ FILE_PI_KERNEL_BUILDING_VER = "ver_pi_building.txt"
 FILE_PI_KERNEL_BUILT_VER = "ver_pi_built.txt"
 
 VYOS_MAJOR_VER = "current"
+DOCKER_IMAGE_NAME = "localhost/vyos-build"
 
 
 def stop_container() -> None:
@@ -42,7 +43,9 @@ def stop_container() -> None:
     image.
     """
     os.system(
-        'sudo docker stop $(sudo docker ps -a -q --filter "ancestor=vyos/vyos-build:'
+        'sudo docker stop $(sudo docker ps -a -q --filter "ancestor='
+        + DOCKER_IMAGE_NAME
+        + ":"
         + VYOS_MAJOR_VER
         + '-arm64")'
     )
