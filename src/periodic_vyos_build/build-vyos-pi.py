@@ -617,7 +617,7 @@ class Main:
 
         # Check for file existence
         filepaths = [f for f in glob.glob("vyos-bcm271*.img.zip") if os.path.isfile(f)]
-        if len(filepaths) < 2:
+        if len(filepaths) < 1:
             raise VyOSBuildFailureException(output)
 
     def _archive_img(self) -> None:
